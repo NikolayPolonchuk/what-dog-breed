@@ -211,3 +211,10 @@ __marimo__/
 all_in_one.py
 *.jpg
 data/
+
+.kaggle/
+kaggle.json
+*.kaggle
+
+test.py
+model.pth

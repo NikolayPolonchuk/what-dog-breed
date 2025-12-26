@@ -1,17 +1,16 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import pandas as pd
-from tqdm import tqdm
 import hydra
 from omegaconf import DictConfig
 
 import matplotlib.pyplot as plt
 from ..dataset.dataset import DogDataset, TestDataset
 from ..model.vit_model import PretrainViT
+from ..dataset.download_data import download_data
 from utils import (
     get_device, create_transforms, split_dataset, 
-    create_dataloaders, get_accuracy, download_data, show_samples
+    create_dataloaders, get_accuracy, show_samples
 )
 
 

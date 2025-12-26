@@ -6,7 +6,11 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset, DataLoader
 from torchvision import transforms
+from pathlib import Path
 import kaggle
+import zipfile
+from omegaconf import DictConfig
+from kaggle.api.kaggle_api_extended import KaggleApi
 
 
 def get_device(cfg):
@@ -120,17 +124,3 @@ def show_samples(batch_img, batch_label, num_samples, label_idx2name, channel_me
     
     plt.tight_layout()
     return fig
-
-
-def download_data(cfg):
-    print("Загрузка данных с Kaggle...")
-    
-    # Создаем директорию для данных, если она не существует
-    os.makedirs(cfg.dataset.paths.data_dir, exist_ok=True)
-    
-    kaggle.api.competition_download_files(
-        cfg.dataset.paths.name,
-        path=cfg.dataset.paths.data_dir,
-        unzip=True
-    )
-    print(f"Данные загружены в {cfg.dataset.paths.data_dir}!")
