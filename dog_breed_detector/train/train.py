@@ -11,6 +11,7 @@ from ..dataset.download_data import download_data
 from utils import (
     get_device, create_transforms, split_dataset, 
     create_dataloaders, get_accuracy, show_samples
+    , calculate_f1_score, plot_training_history
 )
 
 
@@ -82,10 +83,19 @@ def main(cfg: DictConfig):
 
 def train_model(model, train_dataloader, valid_dataloader, criterion, optimizer, device, cfg):
     """Обучает модель и возвращает историю loss"""
-    valid_loss_history = []
+    history = {
+        'train_loss': [],
+        'valid_loss': [], 
+        'train_accuracy': [],
+        'valid_accuracy': [],
+        'train_f1': [],
+        'valid_f1': []
+    }
+
+    total_epochs = cfg.train.train.epochs
     
     # Цикл обучения по эпохам
-    for epoch in range(cfg.train.train.epochs):
+    for epoch in range(total_epochs):
         # Обучение на одной эпохе
         train_loss, train_acc = train_epoch(
             model, train_dataloader, criterion, optimizer, device, cfg
@@ -95,6 +105,9 @@ def train_model(model, train_dataloader, valid_dataloader, criterion, optimizer,
         valid_loss, valid_acc = validate(
             model, valid_dataloader, criterion, device
         )
+
+        train_f1 = calculate_f1_score(model, train_dataloader, device)
+        valid_f1 = calculate_f1_score(model, valid_dataloader, device)
         
         # Вывод метрик
         print(f"Эпоха: {epoch:2d}, "
@@ -102,17 +115,38 @@ def train_model(model, train_dataloader, valid_dataloader, criterion, optimizer,
               f"valid loss: {valid_loss:.3f}, valid acc: {valid_acc:.3f}")
         
         # Сохранение истории метрики валидации
-        valid_loss_history.append(valid_loss)
+        history['train_loss'].append(train_loss)
+        history['valid_loss'].append(valid_loss)
+        history['train_accuracy'].append(train_acc)
+        history['valid_accuracy'].append(valid_acc)
+        history['train_f1'].append(train_f1)
+        history['valid_f1'].append(valid_f1)
         
         # Сохранение лучшей модели
-        if valid_loss <= min(valid_loss_history):
+        if valid_loss <= min(history['valid_loss']):
             torch.save(model.state_dict(), "best_model.pt")
             print(f"Модель сохранена как лучшая (valid loss: {valid_loss:.3f})")
+        
+        plot_training_history(history, epoch + 1, total_epochs)
+
+        checkpoint = {
+            'epoch': epoch + 1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'history': history,
+            'cfg': cfg
+        }
+        torch.save(checkpoint, f"checkpoint_epoch_{epoch+1}.pth")
+        print(f"  → Чекпоинт сохранен: checkpoint_epoch_{epoch+1}.pth")
     
     # Сохранение финальной модели
     torch.save(model.state_dict(), "final_model.pt")
+    print("Финальная модель сохранена: final_model.pt")
+
+    print("ФИНАЛЬНЫЕ ГРАФИКИ ОБУЧЕНИЯ")
+    plot_training_history(history, total_epochs, total_epochs)
     
-    return valid_loss_history
+    return history
 
 
 def train_epoch(model, dataloader, criterion, optimizer, device, cfg):
