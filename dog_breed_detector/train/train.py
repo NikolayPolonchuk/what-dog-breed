@@ -78,7 +78,7 @@ def main(cfg: DictConfig):
     train_model(net, train_dataloader, valid_dataloader, criterion, optimizer, device, cfg)
     
     # Предсказания на тестовых данных
-    make_predictions(net, dataset, valid_transform, device, cfg)
+    # make_predictions(net, dataset, valid_transform, device, cfg)
 
 
 def train_model(model, train_dataloader, valid_dataloader, criterion, optimizer, device, cfg):
