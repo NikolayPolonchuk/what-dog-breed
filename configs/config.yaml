@@ -1,0 +1,9 @@
+defaults:
+  - data:
+      - dataset
+      - preprocessing
+  - model:
+      - model
+      - freezing
+      - optimizer
+  - training: training

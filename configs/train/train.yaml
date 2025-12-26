@@ -1,0 +1,15 @@
+training:
+  epochs: 7
+  log_interval: 100
+  
+  checkpoint:
+    save_best: true
+    monitor: valid_loss
+    mode: min
+    filename: best_model.pt
+    save_dir: ${paths.model_dir}
+  
+  early_stopping:
+    enabled: false
+    patience: 5
+    delta: 0.001
