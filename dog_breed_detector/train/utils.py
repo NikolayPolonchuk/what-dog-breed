@@ -16,7 +16,7 @@ def get_device(cfg):
         except:
             device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     else:
-        device = torch.device(cfg.device)
+        device = torch.device(cfg.train.train.device)
     
     print(f'Текущее устройство: {device}')
     return device
@@ -24,21 +24,23 @@ def get_device(cfg):
 
 def create_transforms(cfg):
     """Создает трансформации для изображений на основе конфигурации"""
-    channel_mean = torch.Tensor(cfg.data.transforms.normalization.mean)
-    channel_std = torch.Tensor(cfg.data.transforms.normalization.std)
+    channel_mean = torch.Tensor(cfg.dataset.preprocessing.channel_mean)
+    channel_std = torch.Tensor(cfg.dataset.preprocessing.channel_std)
+    resize = cfg.dataset.preprocessing.resize
+    crop = cfg.dataset.preprocessing.image_size
     
     train_transform = transforms.Compose([
-        transforms.Resize(cfg.data.transforms.train.resize),
-        transforms.CenterCrop(cfg.data.transforms.train.crop),
-        transforms.RandomHorizontalFlip(p=cfg.data.transforms.train.random_horizontal_flip),
-        transforms.RandomRotation(degrees=cfg.data.transforms.train.random_rotation),
+        transforms.Resize(resize),
+        transforms.CenterCrop(crop),
+        transforms.RandomHorizontalFlip(p=cfg.dataset.preprocessing.random_horizontal_flip),
+        transforms.RandomRotation(degrees=cfg.dataset.preprocessing.random_rotation),
         transforms.ToTensor(),
         transforms.Normalize(mean=channel_mean, std=channel_std),
     ])
     
     valid_transform = transforms.Compose([
-        transforms.Resize(cfg.data.transforms.valid.resize),
-        transforms.CenterCrop(cfg.data.transforms.valid.crop),
+        transforms.Resize(resize),
+        transforms.CenterCrop(crop),
         transforms.ToTensor(),
         transforms.Normalize(mean=channel_mean, std=channel_std),
     ])
@@ -63,14 +65,14 @@ def create_dataloaders(train_dataset, valid_dataset, cfg):
     """Создает DataLoader'ы для обучения и валидации"""
     train_dataloader = DataLoader(
         train_dataset,
-        batch_size=cfg.train.batch_size,
-        shuffle=True
+        batch_size=cfg.train.train.batch_size,
+        shuffle=cfg.train.train.shuffle
     )
     
     valid_dataloader = DataLoader(
         valid_dataset,
-        batch_size=cfg.train.valid_batch_size,
-        shuffle=True
+        batch_size=cfg.train.train.valid_batch_size,
+        shuffle=cfg.train.train.shuffle
     )
     
     return train_dataloader, valid_dataloader
@@ -126,11 +128,11 @@ def download_data(cfg):
     print("Загрузка данных с Kaggle...")
     
     # Создаем директорию для данных, если она не существует
-    os.makedirs(cfg.paths.data_dir, exist_ok=True)
+    os.makedirs(cfg.dataset.paths.data_dir, exist_ok=True)
     
-    kaggle.api.dataset_download_files(
-        cfg.paths.kaggle_dataset,
-        path=cfg.paths.data_dir,
+    kaggle.api.competition_download_files(
+        cfg.dataset.paths.name,
+        path=cfg.dataset.paths.data_dir,
         unzip=True
     )
-    print(f"Данные загружены в {cfg.paths.data_dir}!")
+    print(f"Данные загружены в {cfg.dataset.paths.data_dir}!")

@@ -1,15 +1,10 @@
-training:
+train:
   epochs: 7
+  batch_size: 8
+  valid_batch_size: 32
+  learning_rate: 0.009
+  momentum: 0.9
+  device: "auto"
   log_interval: 100
-  
-  checkpoint:
-    save_best: true
-    monitor: valid_loss
-    mode: min
-    filename: best_model.pt
-    save_dir: ${paths.model_dir}
-  
-  early_stopping:
-    enabled: false
-    patience: 5
-    delta: 0.001
+  visualize_samples: True
+  shuffle: true

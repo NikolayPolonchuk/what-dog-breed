@@ -1,0 +1,5 @@
+paths:
+  name: "dog-breed-identification"
+  train_images: "train"
+  train_labels: "labels.csv"
+  data_dir: "data"
