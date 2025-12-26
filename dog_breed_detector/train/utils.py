@@ -6,11 +6,6 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset, DataLoader
 from torchvision import transforms
-from pathlib import Path
-import kaggle
-import zipfile
-from omegaconf import DictConfig
-from kaggle.api.kaggle_api_extended import KaggleApi
 
 
 def get_device(cfg):

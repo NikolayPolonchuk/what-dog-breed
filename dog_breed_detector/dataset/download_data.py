@@ -1,11 +1,9 @@
-import os
 from ..train.utils import download_data
 import hydra
 from omegaconf import DictConfig
 import zipfile
 from pathlib import Path
 import kaggle
-import json
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
