@@ -218,3 +218,9 @@ kaggle.json
 
 test.py
 model.pth
+
+outputs/
+
+tb_logs/
+
+dog_breed_detector/samples.png

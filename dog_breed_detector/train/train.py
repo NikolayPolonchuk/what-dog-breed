@@ -2,252 +2,235 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import hydra
+import pytorch_lightning as pl
 from omegaconf import DictConfig
-
 import matplotlib.pyplot as plt
-from ..dataset.dataset import DogDataset, TestDataset
-from ..model.vit_model import PretrainViT
-from ..dataset.download_data import download_data
-from utils import (
-    get_device, create_transforms, split_dataset, 
-    create_dataloaders, get_accuracy, show_samples
-    , calculate_f1_score, plot_training_history
+
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor
+from pytorch_lightning.loggers import TensorBoardLogger
+
+from dataset.dataset import DogDataModule
+from model.vit_model import PretrainViT
+from dataset.download_data import download_data
+from .utils import (
+    get_accuracy, show_samples, plot_training_history
 )
+
+
+class LitDogModel(pl.LightningModule):
+    """LightningModule для классификации собак"""
+    
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        self.save_hyperparameters()
+        
+        # Инициализация модели
+        self.model = PretrainViT(cfg)
+        self.criterion = nn.CrossEntropyLoss()
+        
+        # История метрик
+        self.history = {
+            'train_loss': [], 'valid_loss': [],
+            'train_accuracy': [], 'valid_accuracy': [],
+            'train_f1': [], 'valid_f1': []
+        }
+    
+    def forward(self, x):
+        """Инференс модели"""
+        return self.model(x)
+    
+    def training_step(self, batch, batch_idx):
+        """Шаг обучения"""
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        
+        # Вычисление метрик
+        acc = get_accuracy(y_hat, y)
+        train_f1 = self._calculate_f1_batch(y_hat, y)
+        
+        # Логирование
+        self.log('train_loss', loss, prog_bar=True)
+        self.log('train_acc', acc, prog_bar=True)
+        self.log('train_f1', train_f1)
+        
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        """Шаг валидации"""
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        
+        # Вычисление метрик
+        acc = get_accuracy(y_hat, y)
+        val_f1 = self._calculate_f1_batch(y_hat, y)
+        
+        # Логирование
+        self.log('val_loss', loss, prog_bar=True)
+        self.log('val_acc', acc, prog_bar=True)
+        self.log('val_f1', val_f1)
+        
+        return {'val_loss': loss, 'val_acc': acc}
+    
+    def test_step(self, batch, batch_idx):
+        """Шаг тестирования"""
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        acc = get_accuracy(y_hat, y)
+        
+        self.log('test_loss', loss)
+        self.log('test_acc', acc)
+        
+        return {'test_loss': loss, 'test_acc': acc}
+    
+    def configure_optimizers(self):
+        """Настройка оптимизаторов и шедулеров"""
+        optimizer = optim.SGD(
+            self.parameters(),
+            lr=self.cfg.model.optimizer.learning_rate,
+            momentum=self.cfg.model.optimizer.momentum
+        )
+        
+        scheduler = optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=self.cfg.model.optimizer.step_size,
+            gamma=self.cfg.model.optimizer.gamma
+        )
+        
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': scheduler,
+                'interval': 'epoch',
+                'frequency': 1
+            }
+        }
+    
+    def on_train_epoch_end(self):
+        """Вызывается в конце каждой эпохи обучения"""
+        # Сбор метрик
+        train_loss = self.trainer.callback_metrics.get('train_loss', torch.tensor(0.0))
+        train_acc = self.trainer.callback_metrics.get('train_acc', torch.tensor(0.0))
+        val_loss = self.trainer.callback_metrics.get('val_loss', torch.tensor(0.0))
+        val_acc = self.trainer.callback_metrics.get('val_acc', torch.tensor(0.0))
+        
+        # Сохранение истории
+        self.history['train_loss'].append(train_loss.item())
+        self.history['valid_loss'].append(val_loss.item())
+        self.history['train_accuracy'].append(train_acc.item())
+        self.history['valid_accuracy'].append(val_acc.item())
+    
+    def on_validation_epoch_end(self):
+        """Вызывается в конце каждой эпохи валидации"""
+        # Обновление графиков каждые N эпох
+        if (self.current_epoch + 1) % self.cfg.train.train.plot_interval == 0:
+            plot_training_history(
+                self.history,
+                self.current_epoch + 1,
+                self.cfg.train.train.epochs
+            )
+    
+    def _calculate_f1_batch(self, predictions, targets):
+        """Вычисление F1-score для батча"""
+        preds = torch.argmax(predictions, dim=1)
+        correct = (preds == targets).sum().item()
+        total = targets.size(0)
+        return correct / total if total > 0 else 0.0
 
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
-    """Основная функция обучения модели"""
+    """Основная функция обучения с PyTorch Lightning"""
     
-    # Установка seed и выбор устройства
-    torch.manual_seed(cfg.model.model.seed)
-    device = get_device(cfg.train.train.device)
+    # Установка seed
+    pl.seed_everything(cfg.model.model.seed, workers=True)
     
     # Скачивание данных
     download_data(cfg)
     
-    # Создание трансформаций
-    train_transform, valid_transform, channel_mean, channel_std = create_transforms(cfg)
+    # Создание DataModule
+    data_module = DogDataModule(cfg)
     
-    # Создание датасета
-    dataset = DogDataset(
-        img_path=f"{cfg.dataset.paths.data_dir}/{cfg.dataset.paths.train_images}",
-        csv_path=f"{cfg.dataset.paths.data_dir}/{cfg.dataset.paths.train_labels}",
-        transform=train_transform
+    # Инициализация модели
+    model = LitDogModel(cfg)
+    
+    # Callback'и
+    checkpoint_callback = ModelCheckpoint(
+        monitor=cfg.model.model.criterion,
+        dirpath='../plots/checkpoints/',
+        filename='dog-model-{epoch:02d}-{val_loss:.2f}',
+        save_top_k=3,
+        mode='min',
+        save_last=True
     )
     
-    # Разделение на train/valid
-    train_dataset, valid_dataset = split_dataset(dataset, test_size=cfg.model.preprocessing.test_size)
+    early_stop_callback = EarlyStopping(
+        monitor=cfg.model.model.criterion,
+        patience=cfg.train.train.early_stopping_patience,
+        mode='min',
+        verbose=True
+    )
     
-    # Применение разных трансформаций для train и valid
-    train_dataset.dataset.transform = train_transform
-    valid_dataset.dataset.transform = valid_transform
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
     
-    # Создание DataLoader
-    train_dataloader, valid_dataloader = create_dataloaders(train_dataset, valid_dataset, cfg)
+    # Логгер
+    logger = TensorBoardLogger("tb_logs", name="dog_classification")
     
-    # Визуализация примеров из батча
+    # Trainer
+    trainer = pl.Trainer(
+        max_epochs=cfg.train.train.epochs,
+        accelerator='auto',
+        devices='auto',
+        logger=logger,
+        callbacks=[checkpoint_callback, early_stop_callback, lr_monitor],
+        log_every_n_steps=cfg.train.train.log_interval,
+        enable_progress_bar=True,
+        deterministic=True,
+        gradient_clip_val=cfg.train.train.gradient_clip_val
+    )
+    
+    # Визуализация примеров
     if cfg.train.train.visualize_samples:
-        batch_img, batch_label = next(iter(train_dataloader))
+        data_module.setup('fit')
+        train_loader = data_module.train_dataloader()
+        batch_img, batch_label = next(iter(train_loader))
+        
         fig = show_samples(
-            batch_img, 
-            batch_label, 
+            batch_img,
+            batch_label,
             num_samples=cfg.train.train.batch_size,
-            label_idx2name=dataset.label_idx2name,
-            channel_mean=channel_mean,
-            channel_std=channel_std,
-            crop_size=cfg.model.preprocessing.image_size
+            label_idx2name=data_module.dataset.label_idx2name,
+            channel_mean=data_module.channel_mean,
+            channel_std=data_module.channel_std,
+            crop_size=cfg.dataset.preprocessing.image_size
         )
         plt.savefig("samples.png")
         plt.close(fig)
     
-    # Создание модели
-    net = PretrainViT(cfg)
-    net.to(device)
-    print(f"Количество обучаемых параметров: {sum([param.numel() for param in net.parameters() if param.requires_grad])}")
+    # Обучение
+    trainer.fit(model, datamodule=data_module)
     
-    # Loss функция и Optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(
-        net.parameters(), 
-        lr=cfg.model.optimizer.learning_rate, 
-        momentum=cfg.model.optimizer.momentum
+    # Тестирование на лучшей модели
+    best_model_path = checkpoint_callback.best_model_path
+    if best_model_path:
+        print(f"\nЗагрузка лучшей модели: {best_model_path}")
+        model = LitDogModel.load_from_checkpoint(best_model_path, cfg=cfg)
+        trainer.test(model, datamodule=data_module)
+    
+    # Финальные графики
+    print("\nФИНАЛЬНЫЕ ГРАФИКИ ОБУЧЕНИЯ")
+    plot_training_history(
+        model.history,
+        cfg.train.train.epochs,
+        cfg.train.train.epochs
     )
-    
-    # Обучение модели
-    train_model(net, train_dataloader, valid_dataloader, criterion, optimizer, device, cfg)
-    
-    # Предсказания на тестовых данных
-    # make_predictions(net, dataset, valid_transform, device, cfg)
-
-
-def train_model(model, train_dataloader, valid_dataloader, criterion, optimizer, device, cfg):
-    """Обучает модель и возвращает историю loss"""
-    history = {
-        'train_loss': [],
-        'valid_loss': [], 
-        'train_accuracy': [],
-        'valid_accuracy': [],
-        'train_f1': [],
-        'valid_f1': []
-    }
-
-    total_epochs = cfg.train.train.epochs
-    
-    # Цикл обучения по эпохам
-    for epoch in range(total_epochs):
-        # Обучение на одной эпохе
-        train_loss, train_acc = train_epoch(
-            model, train_dataloader, criterion, optimizer, device, cfg
-        )
-        
-        # Валидация
-        valid_loss, valid_acc = validate(
-            model, valid_dataloader, criterion, device
-        )
-
-        train_f1 = calculate_f1_score(model, train_dataloader, device)
-        valid_f1 = calculate_f1_score(model, valid_dataloader, device)
-        
-        # Вывод метрик
-        print(f"Эпоха: {epoch:2d}, "
-              f"train loss: {train_loss:.3f}, train acc: {train_acc:.3f}, "
-              f"valid loss: {valid_loss:.3f}, valid acc: {valid_acc:.3f}")
-        
-        # Сохранение истории метрики валидации
-        history['train_loss'].append(train_loss)
-        history['valid_loss'].append(valid_loss)
-        history['train_accuracy'].append(train_acc)
-        history['valid_accuracy'].append(valid_acc)
-        history['train_f1'].append(train_f1)
-        history['valid_f1'].append(valid_f1)
-        
-        # Сохранение лучшей модели
-        if valid_loss <= min(history['valid_loss']):
-            torch.save(model.state_dict(), "best_model.pt")
-            print(f"Модель сохранена как лучшая (valid loss: {valid_loss:.3f})")
-        
-        plot_training_history(history, epoch + 1, total_epochs)
-
-        checkpoint = {
-            'epoch': epoch + 1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'history': history,
-            'cfg': cfg
-        }
-        torch.save(checkpoint, f"checkpoint_epoch_{epoch+1}.pth")
-        print(f"  → Чекпоинт сохранен: checkpoint_epoch_{epoch+1}.pth")
     
     # Сохранение финальной модели
     torch.save(model.state_dict(), "final_model.pt")
     print("Финальная модель сохранена: final_model.pt")
-
-    print("ФИНАЛЬНЫЕ ГРАФИКИ ОБУЧЕНИЯ")
-    plot_training_history(history, total_epochs, total_epochs)
-    
-    return history
-
-
-def train_epoch(model, dataloader, criterion, optimizer, device, cfg):
-    """Одна эпоха обучения"""
-    model.train()
-    running_loss = 0.0
-    total_loss = 0.0
-    running_acc = 0.0
-    total_acc = 0.0
-    
-    # Количество батчей для усреднения лосса
-    log_interval = cfg.train.train.log_interval
-    
-    for batch_idx, (batch_img, batch_label) in enumerate(dataloader):
-        batch_img = batch_img.to(device)
-        batch_label = batch_label.to(device)
-        
-        # Forward pass
-        optimizer.zero_grad()
-        output = model(batch_img)
-        loss = criterion(output, batch_label)
-        
-        # Backward pass
-        loss.backward()
-        optimizer.step()
-        
-        # Сбор статистики
-        running_loss += loss.item()
-        total_loss += loss.item()
-        
-        acc = get_accuracy(output, batch_label)
-        running_acc += acc
-        total_acc += acc
-        
-        # Логирование каждые log_interval батчей
-        if batch_idx % log_interval == 0 and batch_idx != 0:
-            avg_loss = running_loss / log_interval
-            avg_acc = running_acc / log_interval
-            print(f"[шаг: {batch_idx:4d}/{len(dataloader)}] loss: {avg_loss:.3f}, acc: {avg_acc:.3f}")
-            running_loss = 0.0
-            running_acc = 0.0
-    
-    # Возвращаем средние метрики за эпоху
-    return total_loss / len(dataloader), total_acc / len(dataloader)
-
-
-def validate(model, dataloader, criterion, device):
-    """Валидация модели"""
-    model.eval()
-    total_loss = 0.0
-    total_acc = 0.0
-    
-    with torch.no_grad():
-        for batch_img, batch_label in dataloader:
-            batch_img = batch_img.to(device)
-            batch_label = batch_label.to(device)
-            
-            output = model(batch_img)
-            loss = criterion(output, batch_label)
-            total_loss += loss.item()
-            
-            acc = get_accuracy(output, batch_label)
-            total_acc += acc
-    
-    return total_loss / len(dataloader), total_acc / len(dataloader)
-
-
-
-# ПЕРЕДЕЛАТЬ, НУЖНО ТОЛЬКО ДЛЯ kaggle
-# def make_predictions(model, train_dataset, transform_fn, device, cfg):
-#     """Делает предсказания на тестовых данных и сохраняет submission файл"""
-#     print("Начало предсказаний на тестовых данных...")
-    
-#     # Загрузка модели с лучшими весами
-#     model.load_state_dict(torch.load("best_model.pt", map_location=device))
-#     model.to(device)
-#     model.eval()
-    
-#     # Загрузка данных для submission
-#     submit_df = pd.read_csv(f"{cfg.dataset.paths.data_dir}/{cfg.dataset.paths.sample_submission}")
-#     test_names = submit_df["id"].values
-#     columns = list(train_dataset.label_idx2name)
-    
-#     dfs = []
-    
-#     # Предсказания с прогресс-баром
-#     with torch.no_grad():
-#         for batch_img, batch_name in tqdm(test_dataloader, desc="Предсказание"):
-#             df = pd.DataFrame(columns=["id"] + columns)
-#             df["id"] = batch_name
-            
-#             batch_img = batch_img.to(device)
-#             output = model(batch_img)
-#             sm = torch.nn.functional.softmax(output, dim=1)
-#             df[columns] = sm.cpu().numpy()
-#             dfs.append(df)
-    
-#     # Объединение всех предсказаний
-#     my_submit = pd.concat(dfs, ignore_index=True)
-#     my_submit.to_csv("submit.csv", index=False)
-#     print(f"Submission файл сохранен как submit.csv, количество предсказаний: {len(my_submit)}")
 
 
 if __name__ == "__main__":

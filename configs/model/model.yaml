@@ -3,4 +3,4 @@ model:
   pretrained: true
   num_classes: 120
   seed: 2025
-  criterion: CrossEntropyLoss
+  criterion: "val_loss"

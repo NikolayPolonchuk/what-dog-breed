@@ -2,80 +2,7 @@ import math
 import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
-from torch.utils.data import Subset, DataLoader
-from torchvision import transforms
-
-
-def get_device(cfg):
-    """Определяет устройство для вычислений"""
-    if cfg.device == "auto":
-        try:
-            device = torch.device("mps")
-        except:
-            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    else:
-        device = torch.device(cfg.train.train.device)
-    
-    print(f'Текущее устройство: {device}')
-    return device
-
-
-def create_transforms(cfg):
-    """Создает трансформации для изображений на основе конфигурации"""
-    channel_mean = torch.Tensor(cfg.dataset.preprocessing.channel_mean)
-    channel_std = torch.Tensor(cfg.dataset.preprocessing.channel_std)
-    resize = cfg.dataset.preprocessing.resize
-    crop = cfg.dataset.preprocessing.image_size
-    
-    train_transform = transforms.Compose([
-        transforms.Resize(resize),
-        transforms.CenterCrop(crop),
-        transforms.RandomHorizontalFlip(p=cfg.dataset.preprocessing.random_horizontal_flip),
-        transforms.RandomRotation(degrees=cfg.dataset.preprocessing.random_rotation),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=channel_mean, std=channel_std),
-    ])
-    
-    valid_transform = transforms.Compose([
-        transforms.Resize(resize),
-        transforms.CenterCrop(crop),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=channel_mean, std=channel_std),
-    ])
-    
-    return train_transform, valid_transform, channel_mean, channel_std
-
-
-def split_dataset(dataset, test_size, cfg):
-    """Разделяет датасет на train и validation"""
-    indexes = list(range(len(dataset)))
-    train_indexes, valid_indexes = train_test_split(indexes, test_size=test_size, random_state=cfg.model.model.seed)
-    train_dataset = Subset(dataset, train_indexes)
-    valid_dataset = Subset(dataset, valid_indexes)
-    
-    print(f"Количество образцов в train_dataset: {len(train_dataset)}")
-    print(f"Количество образцов в valid_dataset: {len(valid_dataset)}")
-    
-    return train_dataset, valid_dataset
-
-
-def create_dataloaders(train_dataset, valid_dataset, cfg):
-    """Создает DataLoader'ы для обучения и валидации"""
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=cfg.train.train.batch_size,
-        shuffle=cfg.train.train.shuffle
-    )
-    
-    valid_dataloader = DataLoader(
-        valid_dataset,
-        batch_size=cfg.train.train.valid_batch_size,
-        shuffle=cfg.train.train.shuffle
-    )
-    
-    return train_dataloader, valid_dataloader
 
 
 def get_accuracy(output, label):
@@ -135,7 +62,6 @@ def plot_training_history(history, current_epoch, total_epochs):
     axes[0].set_title(f'Model Accuracy (Epoch {current_epoch}/{total_epochs})')
     axes[0].set_xlabel('Epoch')
     axes[0].set_ylabel('Accuracy')
-    axes[0].legend()
     axes[0].grid(True, alpha=0.3)
     axes[0].set_xticks(epochs_list)
     
@@ -146,7 +72,6 @@ def plot_training_history(history, current_epoch, total_epochs):
     axes[1].set_title(f'Model F1-Score (Epoch {current_epoch}/{total_epochs})')
     axes[1].set_xlabel('Epoch')
     axes[1].set_ylabel('F1-Score')
-    axes[1].legend()
     axes[1].grid(True, alpha=0.3)
     axes[1].set_xticks(epochs_list)
     
@@ -157,7 +82,6 @@ def plot_training_history(history, current_epoch, total_epochs):
     axes[2].set_title(f'Model Loss (Epoch {current_epoch}/{total_epochs})')
     axes[2].set_xlabel('Epoch')
     axes[2].set_ylabel('Loss')
-    axes[2].legend()
     axes[2].grid(True, alpha=0.3)
     axes[2].set_xticks(epochs_list)
     

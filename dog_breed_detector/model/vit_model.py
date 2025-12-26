@@ -13,7 +13,7 @@ class PretrainViT(nn.Module):
         )
         self.model = model
         
-        if cfg.model.freezing.enable:
+        if cfg.model.freezing.enabled:
             for name, param in self.model.named_parameters():
                 if "heads" not in name:
                     param.requires_grad = False

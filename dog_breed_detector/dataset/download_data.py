@@ -22,8 +22,14 @@ def download_data(cfg: DictConfig):
     # Поднимаемся на 2 уровня выше
     base_dir = current_file.parent.parent.parent
     
-    # Создаем папку data
     data_dir = base_dir / cfg.dataset.paths.data_dir
+    
+    if data_dir.exists() and any(data_dir.iterdir()):
+        print(f"Папка {data_dir} уже существует и не пуста.")
+        print("Скачивание не требуется.")
+        return data_dir
+
+    # Создаем папку data
     data_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Скачивание датасета: {competition_name}")

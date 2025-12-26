@@ -8,3 +8,9 @@ train:
   log_interval: 100
   visualize_samples: True
   shuffle: true
+  num_workers: 4
+  plot_interval: 1
+  early_stopping_patience: 10
+  gradient_clip_val: 1.0
+  precision: "16-mixed"
+  deterministic: True
