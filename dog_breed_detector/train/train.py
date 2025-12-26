@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 import matplotlib.pyplot as plt
 
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import MLflowLogger
 
 from dataset.dataset import DogDataModule
 from model.vit_model import PretrainViT
@@ -15,6 +15,7 @@ from dataset.download_data import download_data
 from .utils import (
     get_accuracy, show_samples, plot_training_history
 )
+from callbacks.mlflow_callback import MLflowCallback
 
 
 class LitDogModel(pl.LightningModule):
@@ -143,7 +144,7 @@ class LitDogModel(pl.LightningModule):
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
-    """Основная функция обучения с PyTorch Lightning"""
+    """Основная функция обучения с PyTorch Lightning и MLflow"""
     
     # Установка seed
     pl.seed_everything(cfg.model.model.seed, workers=True)
@@ -176,23 +177,45 @@ def main(cfg: DictConfig):
     
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
     
-    # Логгер
-    logger = TensorBoardLogger("tb_logs", name="dog_classification")
+    # MLflow логгер и callback
+    mlflow_logger = None
+    mlflow_callback = None
+    
+    if cfg.mlflow.enabled:
+        # Создаем MLflow логгер
+        mlflow_logger = MLflowLogger(
+            experiment_name=cfg.mlflow.experiment_name,
+            tracking_uri=cfg.mlflow.tracking_uri,
+            run_name=cfg.mlflow.run_name,
+            tags={
+                "project": cfg.project.name,
+                "model": cfg.model.model.name,
+                "dataset": cfg.dataset.paths.name
+            }
+        )
+        
+        # Создаем MLflow callback
+        mlflow_callback = MLflowCallback(cfg)
+    
+    # Callbacks list
+    callbacks = [checkpoint_callback, early_stop_callback, lr_monitor]
+    if mlflow_callback:
+        callbacks.append(mlflow_callback)
     
     # Trainer
     trainer = pl.Trainer(
         max_epochs=cfg.train.train.epochs,
         accelerator='auto',
         devices='auto',
-        logger=logger,
-        callbacks=[checkpoint_callback, early_stop_callback, lr_monitor],
+        logger=mlflow_logger if mlflow_logger else True,
+        callbacks=callbacks,
         log_every_n_steps=cfg.train.train.log_interval,
         enable_progress_bar=True,
         deterministic=True,
         gradient_clip_val=cfg.train.train.gradient_clip_val
     )
     
-    # Визуализация примеров
+    # Визуализация примеров с логированием в MLflow
     if cfg.train.train.visualize_samples:
         data_module.setup('fit')
         train_loader = data_module.train_dataloader()
@@ -207,8 +230,20 @@ def main(cfg: DictConfig):
             channel_std=data_module.channel_std,
             crop_size=cfg.dataset.preprocessing.image_size
         )
+        
+        # Сохраняем локально
         plt.savefig("samples.png")
         plt.close(fig)
+        
+        # Логируем в MLflow через callback
+        if mlflow_callback:
+            mlflow_callback.log_samples(
+                batch_img, batch_label,
+                data_module.dataset.label_idx2name,
+                data_module.channel_mean,
+                data_module.channel_std,
+                cfg.dataset.preprocessing.image_size
+            )
     
     # Обучение
     trainer.fit(model, datamodule=data_module)
@@ -222,15 +257,39 @@ def main(cfg: DictConfig):
     
     # Финальные графики
     print("\nФИНАЛЬНЫЕ ГРАФИКИ ОБУЧЕНИЯ")
-    plot_training_history(
+    fig = plot_training_history(
         model.history,
         cfg.train.train.epochs,
         cfg.train.train.epochs
     )
     
+    # Сохраняем финальный график
+    if fig:
+        plt.savefig("training_history_final.png", dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        
+        # Логируем в MLflow
+        if mlflow_logger and hasattr(mlflow_logger.experiment, 'log_artifact'):
+            mlflow_logger.experiment.log_artifact(
+                mlflow_logger.run_id,
+                "training_history_final.png"
+            )
+    
     # Сохранение финальной модели
     torch.save(model.state_dict(), "final_model.pt")
     print("Финальная модель сохранена: final_model.pt")
+    
+    # Логируем финальную модель в MLflow
+    if mlflow_logger and hasattr(mlflow_logger.experiment, 'log_artifact'):
+        mlflow_logger.experiment.log_artifact(
+            mlflow_logger.run_id,
+            "final_model.pt"
+        )
+    
+    print(f"\nОбучение завершено!")
+    if cfg.mlflow.enabled and mlflow_logger:
+        print(f"MLflow эксперимент: {cfg.mlflow.experiment_name}")
+        print(f"MLflow run ID: {mlflow_logger.run_id}")
 
 
 if __name__ == "__main__":

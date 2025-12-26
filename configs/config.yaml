@@ -7,4 +7,6 @@ defaults:
       - model
       - freezing
       - optimizer
-  - train: train
+  - train:
+      - train
+      - mlflow

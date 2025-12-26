@@ -1,0 +1,5 @@
+mlflow:
+  enabled: true
+  tracking_uri: "./mlruns"
+  experiment_name: dog-breed-identification
+  run_name: vit-experiment-${now:%Y%m%d_%H%M%S}

@@ -48,45 +48,60 @@ def show_samples(batch_img, batch_label, num_samples, label_idx2name, channel_me
     return fig
 
 
-def plot_training_history(history, current_epoch, total_epochs):
+def plot_training_history(history, current_epoch, total_epochs, save_path=None):
     """Построение графиков после каждой эпохи"""
     epochs_list = list(range(1, current_epoch + 1))
+    
+    # Проверяем, есть ли данные для графиков
+    if len(history['train_accuracy']) == 0:
+        return None
     
     # Создание subplots
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
     
     # График Accuracy
-    if len(history['train_accuracy']) > 0:
-        axes[0].plot(epochs_list, history['train_accuracy'], 'b-', label='Train Accuracy', marker='o')
-        axes[0].plot(epochs_list, history['valid_accuracy'], 'r-', label='Valid Accuracy', marker='s')
+    axes[0].plot(epochs_list, history['train_accuracy'], 'b-', label='Train Accuracy', marker='o')
+    axes[0].plot(epochs_list, history['valid_accuracy'], 'r-', label='Valid Accuracy', marker='s')
     axes[0].set_title(f'Model Accuracy (Epoch {current_epoch}/{total_epochs})')
     axes[0].set_xlabel('Epoch')
     axes[0].set_ylabel('Accuracy')
     axes[0].grid(True, alpha=0.3)
     axes[0].set_xticks(epochs_list)
+    axes[0].legend()
     
     # График F1-Score
     if len(history['train_f1']) > 0:
         axes[1].plot(epochs_list, history['train_f1'], 'b-', label='Train F1-Score', marker='o')
         axes[1].plot(epochs_list, history['valid_f1'], 'r-', label='Valid F1-Score', marker='s')
-    axes[1].set_title(f'Model F1-Score (Epoch {current_epoch}/{total_epochs})')
-    axes[1].set_xlabel('Epoch')
-    axes[1].set_ylabel('F1-Score')
-    axes[1].grid(True, alpha=0.3)
-    axes[1].set_xticks(epochs_list)
+        axes[1].set_title(f'Model F1-Score (Epoch {current_epoch}/{total_epochs})')
+        axes[1].set_xlabel('Epoch')
+        axes[1].set_ylabel('F1-Score')
+        axes[1].grid(True, alpha=0.3)
+        axes[1].set_xticks(epochs_list)
+        axes[1].legend()
+    else:
+        axes[1].set_title('F1-Score (недоступно)')
+        axes[1].set_xlabel('Epoch')
+        axes[1].set_ylabel('F1-Score')
+        axes[1].grid(True, alpha=0.3)
     
     # График Loss
-    if len(history['train_loss']) > 0:
-        axes[2].plot(epochs_list, history['train_loss'], 'b-', label='Train Loss', marker='o')
-        axes[2].plot(epochs_list, history['valid_loss'], 'r-', label='Valid Loss', marker='s')
+    axes[2].plot(epochs_list, history['train_loss'], 'b-', label='Train Loss', marker='o')
+    axes[2].plot(epochs_list, history['valid_loss'], 'r-', label='Valid Loss', marker='s')
     axes[2].set_title(f'Model Loss (Epoch {current_epoch}/{total_epochs})')
     axes[2].set_xlabel('Epoch')
     axes[2].set_ylabel('Loss')
     axes[2].grid(True, alpha=0.3)
     axes[2].set_xticks(epochs_list)
+    axes[2].legend()
     
     plt.tight_layout()
-    plt.show()
+    
+    # Сохраняем график если указан путь
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    
+    return fig
 
 
 def calculate_f1_score(model, dataloader, device):
