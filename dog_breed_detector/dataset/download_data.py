@@ -1,4 +1,3 @@
-from ..train.utils import download_data
 import hydra
 from omegaconf import DictConfig
 import zipfile
