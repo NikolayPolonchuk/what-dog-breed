@@ -2,6 +2,7 @@ defaults:
   - data:
       - dataset
       - preprocessing
+      - paths
   - model:
       - model
       - freezing
