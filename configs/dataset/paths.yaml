@@ -3,3 +3,4 @@ paths:
   train_images: "train"
   train_labels: "labels.csv"
   data_dir: "data"
+  remove_zip: True
