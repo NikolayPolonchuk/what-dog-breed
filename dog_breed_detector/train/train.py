@@ -7,8 +7,8 @@ import hydra
 from omegaconf import DictConfig
 
 import matplotlib.pyplot as plt
-from dog_breed_detector.dataset.dataset import DogDataset, TestDataset
-from dog_breed_detector.model.vit_model import PretrainViT
+from ..dataset.dataset import DogDataset, TestDataset
+from ..model.vit_model import PretrainViT
 from utils import (
     get_device, create_transforms, split_dataset, 
     create_dataloaders, get_accuracy, download_data, show_samples

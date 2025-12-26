@@ -1,4 +1,0 @@
-dataset:
-  name: what-dog-breed
-  num_workers: 4
-  shuffle: true

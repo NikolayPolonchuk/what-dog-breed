@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset, DataLoader
 from torchvision import transforms
+import kaggle
 
 
 def get_device(cfg):
@@ -122,9 +123,6 @@ def show_samples(batch_img, batch_label, num_samples, label_idx2name, channel_me
 
 
 def download_data(cfg):
-    """Скачивает данные с Kaggle"""
-    import kaggle
-    
     print("Загрузка данных с Kaggle...")
     
     # Создаем директорию для данных, если она не существует
