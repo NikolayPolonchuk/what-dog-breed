@@ -221,8 +221,6 @@ outputs/
 
 tb_logs/
 
-dog_breed_detector/samples.png
-
 mlruns/
 
 checkpoints/
