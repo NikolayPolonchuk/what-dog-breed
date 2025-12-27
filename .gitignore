@@ -232,3 +232,5 @@ model/model.onnx
 model/model.pth
 
 dog.jpg
+
+data/
