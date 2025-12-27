@@ -38,37 +38,47 @@ https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vit_l_1
 ## Setup
 
 
-
+Работал в VSCode на windows. В качетве терминала использовал git bash
 
 ```
-# 0) Клонировать репозиторий
-git clone  https://github.com/NikolayPolonchuk/what-dog-breed
 
-# 0.5) Установить uv (если ещё не установлен)
+
+# 0) Установить uv (если ещё не установлен)
 # pip install uv
 
-# 1) Установить зависимости
-uv sync
+# 0.5) Клонировать репозиторий
+git clone  https://github.com/NikolayPolonchuk/what-dog-breed
 
-# 2) Проверка кодстайла
-uv run pre-commit install
-uv run pre-commit run -a
+# 1) Создать виртуальное окружение
+uv venv
+
+# 2) И активировать его
+source .venv/Scripts/activate
+
+```
+
+## Train
+
+```
 
 # 3) Скачивание данных с Kaggle и DVC
-uv run python -m paddy_disease.commands download_data
+uv run -m dog_breeddetector.dataset.download_data
+# для этого также необходимо скачать на kaggle kaggle.json и вставить в корневую папку компьютера .kaggle\ (создайте её при необходимости)
 
 # 4) Обучение
-uv run python -m paddy_disease.commands train train.epochs=1 data.batch_size=8 data.num_workers=0
+uv run -m dog_breeddetector.train.train
 
-# 5) Экспорт ONNX
-uv run python -m paddy_disease.commands export_onnx
+```
 
-# 6) Экспорт labels (индекс -> имя класса, нужно для инференса)
-uv run python -m paddy_disease.commands export_labels
+## Production preparation
 
-# 7) Triton в Docker
-sudo docker compose up -d triton
-curl -sf http://localhost:8000/v2/health/ready >/dev/null && echo "READY"
+```
+# 5) При необходимости можно выгрузить промежуточную модель (при завершении train вручную выгружать модель не надо)
+uv run -m dog_breeddetector.exports.extract_model
+
+# 6) Экспорт ONNX
+uv run -m dog_breeddetector.exports.extract_model
+
 
 
 ```

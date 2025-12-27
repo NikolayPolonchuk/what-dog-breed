@@ -1,7 +1,8 @@
 defaults:
   - _self_
   - bot:
-      - bot
+      - bot:
+        - logging
   - mlflow: 
       - mlflow
   - dataset:
