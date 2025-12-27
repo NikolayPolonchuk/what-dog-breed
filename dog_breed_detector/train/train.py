@@ -172,7 +172,6 @@ class LitDogModel(pl.LightningModule):
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
-    """Основная функция обучения с PyTorch Lightning и MLFlow"""
     
     # Установка seed
     pl.seed_everything(cfg.model.model.seed, workers=True)

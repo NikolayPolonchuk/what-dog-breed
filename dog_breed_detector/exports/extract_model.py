@@ -8,9 +8,7 @@ import hydra
 
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
-def convert_model(cfg: DictConfig):
-    """Загружает Lightning модель и сохраняет чистые веса"""
-    
+def convert_model(cfg: DictConfig):    
     ckpt_path = "checkpoints/last.ckpt"  # или путь к вашему .ckpt
     
     # Загружаем Lightning модель

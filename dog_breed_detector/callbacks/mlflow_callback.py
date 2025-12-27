@@ -13,8 +13,6 @@ from typing import List, Optional
 
 
 class MLFlowCallback(Callback):
-    """MLFlow callback для PyTorch Lightning"""
-    
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -28,7 +26,6 @@ class MLFlowCallback(Callback):
             self._setup_mlflow()
     
     def _setup_mlflow(self):
-        """Настройка MLFlow"""
         tracking_uri = self.mlflow_config.tracking_uri
         experiment_name = self.mlflow_config.experiment_name
         
@@ -51,7 +48,6 @@ class MLFlowCallback(Callback):
         print(f"  Experiment: {experiment_name}")
 
     def _cleanup_active_runs(self):
-        """Очистка активных MLFlow runs"""
         try:
             active_run = mlflow.active_run()
             if active_run is not None:
@@ -64,7 +60,6 @@ class MLFlowCallback(Callback):
             print(f"Ошибка при очистке активных runs: {e}")
     
     def on_fit_start(self, trainer, pl_module):
-        """Начало обучения"""
         if not self.enabled:
             return
         
@@ -97,7 +92,6 @@ class MLFlowCallback(Callback):
             self.enabled = False
     
     def _log_params(self, pl_module):
-        """Логирование параметров"""
         try:
             # Логирование конфигурации
             config_dict = OmegaConf.to_container(self.config.train, resolve=True)
@@ -126,7 +120,6 @@ class MLFlowCallback(Callback):
             print(f"Ошибка при логировании параметров: {e}")
     
     def _save_figure(self, fig: plt.Figure, artifact_path: str, filename_prefix: str = "plot") -> Optional[str]:
-        """Сохранение и логирование графиков"""
         temp_file = None
         try:
             with tempfile.NamedTemporaryFile(suffix='.png', prefix=filename_prefix, delete=False) as tmp:
@@ -144,7 +137,6 @@ class MLFlowCallback(Callback):
             return None
     
     def _safe_delete(self, filepath: str, max_attempts: int = 3):
-        """Удаление файлов"""
         if not filepath or not os.path.exists(filepath):
             return
         
@@ -165,7 +157,6 @@ class MLFlowCallback(Callback):
                 break
     
     def on_train_epoch_end(self, trainer, pl_module):
-        """Конец эпохи обучения"""
         if not self.enabled:
             return
         
@@ -188,7 +179,6 @@ class MLFlowCallback(Callback):
                 print(f"Ошибка при логировании метрик: {e}")
     
     def on_validation_epoch_end(self, trainer, pl_module):
-        """Конец эпохи валидации"""
         if not self.enabled:
             return
         
@@ -249,7 +239,6 @@ class MLFlowCallback(Callback):
                 print(f"Ошибка при создании графиков: {e}")
     
     def on_train_end(self, trainer, pl_module):
-        """Конец обучения"""
         if not self.enabled:
             return
         
@@ -304,7 +293,7 @@ class MLFlowCallback(Callback):
             self._cleanup_temp_files()
     
     def _cleanup_temp_files(self):
-        """Очистка временных файлов"""
+        # Очистка временных файлов
         files_to_delete = list(self._temp_files)
         for filepath in files_to_delete:
             self._safe_delete(filepath)
@@ -312,7 +301,6 @@ class MLFlowCallback(Callback):
         print(f"Очищено {len(files_to_delete) - len(self._temp_files)} временных файлов")
     
     def log_samples(self, batch_img, batch_label, label_idx2name, channel_mean, channel_std, crop_size):
-        """Логирование примеров изображений"""
         if not self.enabled:
             return
         
@@ -340,7 +328,6 @@ class MLFlowCallback(Callback):
             print(f"Ошибка при логировании примеров: {e}")
     
     def _create_samples_figure(self, batch_img, batch_label, num_samples, label_idx2name, channel_mean, channel_std, crop_size):
-        """Создает график с примерами"""
         sample_idx = 0
         total_col = 4
         total_row = math.ceil(num_samples / total_col)
@@ -373,7 +360,7 @@ class MLFlowCallback(Callback):
         return fig
     
     def __del__(self):
-        """Деструктор"""
+        # Деструктор
         if hasattr(self, '_temp_files') and self._temp_files:
             print(f"MLFlowCallback: очистка {len(self._temp_files)} временных файлов в деструкторе")
             self._cleanup_temp_files()

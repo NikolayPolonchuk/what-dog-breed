@@ -8,17 +8,8 @@ from typing import List, Dict, Optional
 
 
 class DogBreedClassifier:
-    """Классификатор пород собак для продакшн инференса"""
     
     def __init__(self, model_path: str, config_path: str, device: str = None):
-        """
-        Инициализация классификатора
-        
-        Args:
-            model_path: путь к файлу с весами модели (.pth)
-            config_path: путь к конфигурационному файлу
-            device: устройство для вычислений (cuda/cpu)
-        """
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         
         # Загрузка конфигурации
@@ -37,7 +28,6 @@ class DogBreedClassifier:
         self.class_names = self._load_class_names()
     
     def _load_model(self, model_path: str):
-        """Загрузка архитектуры модели и весов"""
         # Импорт здесь чтобы избежать зависимостей при использовании
         from dog_breed_detector.model.vit_model import PretrainViT
         from omegaconf import DictConfig, OmegaConf
@@ -58,23 +48,21 @@ class DogBreedClassifier:
         return model
     
     def _create_transform(self):
-        """Создание трансформаций для инференса"""
         from torchvision import transforms
         
-        cfg = self.config['dataset']['preprocessing']
+        cfg = self.config.dataset.preprocessing
         
         return transforms.Compose([
-            transforms.Resize(cfg['resize']),
-            transforms.CenterCrop(cfg['image_size']),
+            transforms.Resize(cfg.resize),
+            transforms.CenterCrop(cfg.image_size),
             transforms.ToTensor(),
             transforms.Normalize(
-                mean=cfg['channel_mean'],
-                std=cfg['channel_std']
+                mean=cfg.channel_mean,
+                std=cfg.channel_std
             )
         ])
     
     def _load_class_names(self) -> Optional[List[str]]:
-        """Загрузка названий классов"""
         # Попробуем найти файл с названиями классов
         class_names_path = Path('data/class_names.json')
         if class_names_path.exists():
@@ -83,16 +71,6 @@ class DogBreedClassifier:
         return None
     
     def predict(self, image_path: str, top_k: int = 5) -> Dict:
-        """
-        Предсказание породы собаки
-        
-        Args:
-            image_path: путь к изображению
-            top_k: количество топовых предсказаний
-            
-        Returns:
-            Словарь с предсказаниями
-        """
         # Загрузка и предобработка изображения
         image = Image.open(image_path).convert('RGB')
         image_tensor = self.transform(image).unsqueeze(0).to(self.device)
@@ -143,14 +121,12 @@ class DogBreedClassifier:
         return results
     
     def save_class_names(self, class_names: List[str]):
-        """Сохранение названий классов"""
         with open('data/class_names.json', 'w') as f:
             json.dump(class_names, f, indent=2)
         self.class_names = class_names
 
 
 def main():
-    """Пример использования классификатора"""
     import argparse
     
     parser = argparse.ArgumentParser(description='Dog Breed Classifier Inference')

@@ -55,9 +55,7 @@ class DogDataset(Dataset):
         return img, label
 
 
-class DogDataModule(pl.LightningDataModule):
-    """DataModule для датасета собак"""
-    
+class DogDataModule(pl.LightningDataModule):    
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
@@ -70,11 +68,9 @@ class DogDataModule(pl.LightningDataModule):
         self.channel_std = None
     
     def prepare_data(self):
-        """Скачивание данных (вызывается только на 1 GPU)"""
         pass
     
     def setup(self, stage=None):
-        """Подготовка данных (вызывается на каждом GPU)"""
         # Создание трансформаций
         self.train_transform, self.val_transform, self.channel_mean, self.channel_std = create_transforms(self.cfg)
         
@@ -104,7 +100,6 @@ class DogDataModule(pl.LightningDataModule):
         print(f"Количество образцов в val_dataset: {len(self.val_dataset)}")
     
     def train_dataloader(self):
-        """DataLoader для обучения"""
         return DataLoader(
             self.train_dataset,
             batch_size=self.cfg.train.train.batch_size,
@@ -114,7 +109,6 @@ class DogDataModule(pl.LightningDataModule):
         )
     
     def val_dataloader(self):
-        """DataLoader для валидации"""
         return DataLoader(
             self.val_dataset,
             batch_size=self.cfg.train.train.valid_batch_size,
@@ -124,12 +118,10 @@ class DogDataModule(pl.LightningDataModule):
         )
     
     def test_dataloader(self):
-        """DataLoader для тестирования (можно добавить тестовый датасет)"""
         return self.val_dataloader()
 
 
 def get_device(cfg):
-    """Определяет устройство для вычислений"""
     if cfg.train.train.device == "auto":
         if torch.cuda.is_available():
             device = torch.device("cuda")
@@ -145,7 +137,6 @@ def get_device(cfg):
 
 
 def create_transforms(cfg):
-    """Создает трансформации для изображений на основе конфигурации"""
     channel_mean = torch.Tensor(cfg.dataset.preprocessing.channel_mean)
     channel_std = torch.Tensor(cfg.dataset.preprocessing.channel_std)
     resize = cfg.dataset.preprocessing.resize

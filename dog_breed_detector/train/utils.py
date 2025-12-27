@@ -6,7 +6,6 @@ from sklearn.metrics import f1_score
 
 
 def get_accuracy(output, label):
-    """Вычисляет точность предсказаний"""
     output = output.to("cpu")
     label = label.to("cpu")
     
@@ -16,7 +15,6 @@ def get_accuracy(output, label):
 
 
 def show_samples(batch_img, batch_label, num_samples, label_idx2name, channel_mean, channel_std, crop_size):
-    """Показывает примеры изображений с метками"""
     sample_idx = 0
     total_col = 4
     total_row = math.ceil(num_samples / total_col)
@@ -50,7 +48,6 @@ def show_samples(batch_img, batch_label, num_samples, label_idx2name, channel_me
 
 
 def plot_training_history(history, current_epoch):
-    """Исправленная версия с проверкой размеров данных"""
     
     # Проверяем, что есть хотя бы одна эпоха данных
     if len(history['train_loss']) == 0:
@@ -108,7 +105,6 @@ def plot_training_history(history, current_epoch):
 
 
 def calculate_f1_score(model, dataloader, device):
-    """Вычисление F1-score"""
     model.eval()
     all_preds = []
     all_labels = []

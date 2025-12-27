@@ -8,11 +8,7 @@ import kaggle
 def main(cfg: DictConfig):
     download_data(cfg)
 
-def download_data(cfg: DictConfig):
-    """
-    Скачивает датасет с Kaggle
-    """
-    
+def download_data(cfg: DictConfig):    
     # Название соревнования
     competition_name = cfg.dataset.paths.name
     
