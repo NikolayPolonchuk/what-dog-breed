@@ -230,8 +230,8 @@ checkpoints/
 
 samples.png
 
-model.onnx
-model.onnx.data
-model.pth
+model/model.onnx.data
+model/model.onnx
+model/model.pth
 
 dog.jpg
