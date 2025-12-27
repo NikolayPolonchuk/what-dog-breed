@@ -1,5 +1,5 @@
 paths:
-  name: "dog-breed-identification"
+  name: "dog-breed"
   train_images: "train"
   train_labels: "labels.csv"
   test_images: "test"

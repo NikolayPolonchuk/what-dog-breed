@@ -1,5 +1,4 @@
 preprocessing:
-  test_size: 0.1
   image_size: 224
   resize: 256
   channel_mean: [0.485, 0.456, 0.406]

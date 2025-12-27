@@ -217,7 +217,6 @@ kaggle.json
 *.kaggle
 
 test.py
-model.pth
 
 outputs/
 

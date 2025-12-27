@@ -89,7 +89,7 @@ class DogDataModule(pl.LightningDataModule):
         indexes = list(range(len(self.dataset)))
         train_indexes, val_indexes = train_test_split(
             indexes,
-            test_size=self.cfg.dataset.preprocessing.test_size,
+            test_size=self.cfg.dataset.dataset.test_size,
             random_state=self.cfg.model.model.seed
         )
         

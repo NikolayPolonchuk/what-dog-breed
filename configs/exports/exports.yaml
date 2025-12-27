@@ -1,0 +1,11 @@
+# configs/export/onnx.yaml
+exports:
+  model_path: "model/model.pth"
+  onnx_path: "model/model.onnx"
+  preprocessing_path: "model/preprocessing.onnx"
+  postprocessing_path: "model/postprocessing.onnx"
+  test_data_dir: "test_data"
+  opset_version: 13
+  dynamic_batch: true
+  export_preprocessing: true
+  export_postprocessing: true
