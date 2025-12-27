@@ -216,7 +216,6 @@ data/
 kaggle.json
 *.kaggle
 
-test.py
 
 outputs/
 
