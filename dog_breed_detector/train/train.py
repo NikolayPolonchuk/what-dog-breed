@@ -12,13 +12,25 @@ from hydra.utils import get_original_cwd
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor
 from pytorch_lightning.loggers import MLFlowLogger
 
-from ..dataset.dataset import DogDataModule
-from ..model.vit_model import PretrainViT
-from ..dataset.download_data import download_data
-from .utils import (
-    get_accuracy, show_samples, plot_training_history
-)
-from ..callbacks.mlflow_callback import MLFlowCallback
+# ВАЖНО: правильные относительные импорты
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+# Теперь можно импортировать
+try:
+    from dataset.dataset import DogDataModule
+    from model.vit_model import PretrainViT
+    from callbacks.mlflow_callback import MLFlowCallback
+    from dataset.download_data import download_data
+    from train.utils import get_accuracy, show_samples, plot_training_history
+except ImportError:
+    # Альтернативный путь
+    from ..dataset.dataset import DogDataModule
+    from ..model.vit_model import PretrainViT
+    from ..callbacks.mlflow_callback import MLFlowCallback
+    from ..dataset.download_data import download_data
+    from ..train.utils import get_accuracy, show_samples, plot_training_history
 
 
 class LitDogModel(pl.LightningModule):

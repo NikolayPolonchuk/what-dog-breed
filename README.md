@@ -11,7 +11,7 @@
 Выходные данные: вектор вероятностей длины 120, пользователь будет получать наиболее вероятную породу.
 
 ### Метрики
-Буду использовать F1-score, а также Accuracy, обе ожидаю в пределах 0.80-0.95, т.к. ошибки в схожих породах наверняка будут.
+Буду использовать Accuracy, ожидаю параметр в пределах 0.80-0.95, т.к. ошибки в схожих породах наверняка будут.
 
 ### Валидация и тест
 Разделение данных - 90% train и 10% validation. Фиксируем seed для воспроизводимости, чтобы другие исследователи имели возможность повторить эксперимент и получить те же результаты. Так же это важно для честного сравнения разных методов на одинаковых данных и условиях.
@@ -37,6 +37,38 @@ https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vit_l_1
 
 ## Setup
 
-#bash
-0) pip install uv
 
+
+
+```
+# 0) Клонировать репозиторий
+git clone  https://github.com/NikolayPolonchuk/what-dog-breed
+
+# 0.5) Установить uv (если ещё не установлен)
+# pip install uv
+
+# 1) Установить зависимости
+uv sync
+
+# 2) Проверка кодстайла
+uv run pre-commit install
+uv run pre-commit run -a
+
+# 3) Скачивание данных с Kaggle и DVC
+uv run python -m paddy_disease.commands download_data
+
+# 4) Обучение
+uv run python -m paddy_disease.commands train train.epochs=1 data.batch_size=8 data.num_workers=0
+
+# 5) Экспорт ONNX
+uv run python -m paddy_disease.commands export_onnx
+
+# 6) Экспорт labels (индекс -> имя класса, нужно для инференса)
+uv run python -m paddy_disease.commands export_labels
+
+# 7) Triton в Docker
+sudo docker compose up -d triton
+curl -sf http://localhost:8000/v2/health/ready >/dev/null && echo "READY"
+
+
+```
