@@ -230,3 +230,7 @@ checkpoints/
 
 samples.png
 
+model.onnx
+model.onnx.data
+model.pth
+
