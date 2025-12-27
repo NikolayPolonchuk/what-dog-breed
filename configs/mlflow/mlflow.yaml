@@ -3,3 +3,11 @@ mlflow:
   tracking_uri: "http://localhost:5000"
   experiment_name: dog-breed-identification
   run_name: "vit-l-16-run"
+  logging:
+    metrics: true
+    params: true
+    plots: true
+    models: true
+  artifacts:
+    save_checkpoints: true
+    save_samples: true
