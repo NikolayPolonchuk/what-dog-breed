@@ -1,3 +1,2 @@
 freezing:
   enabled: true
-  freeze_except: ["heads"]

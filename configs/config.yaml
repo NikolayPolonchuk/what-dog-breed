@@ -1,12 +1,23 @@
 defaults:
-  - dataset:
-      - dataset
-      - preprocessing
-      - paths
-  - model:
-      - model
-      - freezing
-      - optimizer
-  - train:
-      - train
-      - mlflow
+  - model/vit
+  - data/dataset
+
+project_name: "dog_breed_identification"
+seed: 2025
+device: "auto"
+
+train:
+  epochs: 7
+  batch_size: 8
+  valid_batch_size: 32
+  learning_rate: 0.009
+  momentum: 0.9
+  test_size: 0.1
+
+paths:
+  data_dir: "data"
+  kaggle_dataset: "c/dog-breed-identification"
+  train_images: "train"
+  test_images: "test"
+  train_labels: "labels.csv"
+  sample_submission: "sample_submission.csv"

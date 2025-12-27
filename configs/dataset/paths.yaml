@@ -2,5 +2,6 @@ paths:
   name: "dog-breed-identification"
   train_images: "train"
   train_labels: "labels.csv"
-  data_dir: "/c/Users/admin/VSCode/python/dog_breed"
+  test_images: "test"
+  data_dir: "./data"
   remove_zip: True

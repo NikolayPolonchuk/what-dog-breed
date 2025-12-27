@@ -1,6 +1,6 @@
 model:
   name: vit_l_16
-  pretrained: true
+  weights: "IMAGENET1K_V1"
   num_classes: 120
   seed: 2025
   criterion: "val_loss"

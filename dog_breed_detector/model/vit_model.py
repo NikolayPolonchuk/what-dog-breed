@@ -5,7 +5,7 @@ from torchvision import models
 class PretrainViT(nn.Module):
     def __init__(self, cfg):
         super(PretrainViT, self).__init__()
-        model = models.vit_l_16(pretrained=cfg.model.model.pretrained)
+        model = models.vit_l_16(weights=cfg.model.model.weights)
         num_classifier_feature = model.heads.head.in_features
         
         model.heads.head = nn.Sequential(

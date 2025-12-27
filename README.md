@@ -37,3 +37,6 @@ https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vit_l_1
 
 ## Setup
 
+#bash
+0) pip install uv
+

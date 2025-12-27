@@ -1,0 +1,7 @@
+bot:
+  token: ""  # Заполнить токеном или установить через переменную окружения
+  model_path: "model/best_model.pt"  # Путь к модели
+  labels_path: "model/label_idx2name.pkl"  # Путь к меткам пород
+  use_webhook: false  # Использовать вебхуки
+  max_image_size_mb: 10  # Максимальный размер изображения в MB
+  allowed_users: []  # Список разрешенных пользователей (пустой для всех)

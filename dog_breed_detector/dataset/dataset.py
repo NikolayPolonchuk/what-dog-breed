@@ -1,4 +1,3 @@
-import glob
 import pandas as pd
 import torch
 import pytorch_lightning as pl
@@ -8,14 +7,6 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset, DataLoader
 from torchvision import transforms
 from torch.utils.data import Dataset
-
-
-from pathlib import Path
-import torch
-from torch.utils.data import Dataset
-import pandas as pd
-from PIL import Image
-import glob
 
 
 class DogDataset(Dataset):
@@ -80,7 +71,6 @@ class DogDataModule(pl.LightningDataModule):
     
     def prepare_data(self):
         """Скачивание данных (вызывается только на 1 GPU)"""
-        # Этот метод вызывается только один раз
         pass
     
     def setup(self, stage=None):

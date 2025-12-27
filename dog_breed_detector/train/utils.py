@@ -32,6 +32,7 @@ def show_samples(batch_img, batch_label, num_samples, label_idx2name, channel_me
         img = img.view(3, -1) * channel_std.view(3, -1) + channel_mean.view(3, -1)
         img = img.view(3, crop_size, crop_size)
         img = img.permute(1, 2, 0)
+        img = torch.clamp(img, 0, 1)  # Ограничиваем значения
         
         axs[row_idx, col_idx].imshow(img)
         
@@ -48,59 +49,61 @@ def show_samples(batch_img, batch_label, num_samples, label_idx2name, channel_me
     return fig
 
 
-def plot_training_history(history, current_epoch, total_epochs, save_path=None):
-    """Построение графиков после каждой эпохи"""
-    epochs_list = list(range(1, current_epoch + 1))
+def plot_training_history(history, current_epoch):
+    """Исправленная версия с проверкой размеров данных"""
     
-    # Проверяем, есть ли данные для графиков
-    if len(history['train_accuracy']) == 0:
+    # Проверяем, что есть хотя бы одна эпоха данных
+    if len(history['train_loss']) == 0:
+        print(f"История пуста, невозможно построить график для эпохи {current_epoch}")
         return None
     
-    # Создание subplots
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+    # Создаем список эпох на основе доступных данных
+    # Используем длину train_loss как базовую
+    available_epochs = len(history['train_loss'])
+    epochs_list = list(range(1, available_epochs + 1))
     
-    # График Accuracy
-    axes[0].plot(epochs_list, history['train_accuracy'], 'b-', label='Train Accuracy', marker='o')
-    axes[0].plot(epochs_list, history['valid_accuracy'], 'r-', label='Valid Accuracy', marker='s')
-    axes[0].set_title(f'Model Accuracy (Epoch {current_epoch}/{total_epochs})')
-    axes[0].set_xlabel('Epoch')
-    axes[0].set_ylabel('Accuracy')
-    axes[0].grid(True, alpha=0.3)
-    axes[0].set_xticks(epochs_list)
-    axes[0].legend()
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     
-    # График F1-Score
-    if len(history['train_f1']) > 0:
-        axes[1].plot(epochs_list, history['train_f1'], 'b-', label='Train F1-Score', marker='o')
-        axes[1].plot(epochs_list, history['valid_f1'], 'r-', label='Valid F1-Score', marker='s')
-        axes[1].set_title(f'Model F1-Score (Epoch {current_epoch}/{total_epochs})')
-        axes[1].set_xlabel('Epoch')
-        axes[1].set_ylabel('F1-Score')
-        axes[1].grid(True, alpha=0.3)
-        axes[1].set_xticks(epochs_list)
-        axes[1].legend()
+    # График loss
+    if len(history['train_loss']) >= available_epochs and len(history['valid_loss']) >= available_epochs:
+        axes[0].plot(epochs_list, history['train_loss'][:available_epochs], 'b-', label='Train Loss', marker='o')
+        axes[0].plot(epochs_list, history['valid_loss'][:available_epochs], 'r-', label='Valid Loss', marker='s')
+        axes[0].set_xlabel('Epoch')
+        axes[0].set_ylabel('Loss')
+        axes[0].set_title(f'Loss History (Эпоха {current_epoch})')
+        axes[0].legend()
+        axes[0].grid(True, alpha=0.3)
     else:
-        axes[1].set_title('F1-Score (недоступно)')
-        axes[1].set_xlabel('Epoch')
-        axes[1].set_ylabel('F1-Score')
-        axes[1].grid(True, alpha=0.3)
+        print(f"Недостаточно данных для построения графика loss. Train: {len(history['train_loss'])}, Valid: {len(history['valid_loss'])}")
     
-    # График Loss
-    axes[2].plot(epochs_list, history['train_loss'], 'b-', label='Train Loss', marker='o')
-    axes[2].plot(epochs_list, history['valid_loss'], 'r-', label='Valid Loss', marker='s')
-    axes[2].set_title(f'Model Loss (Epoch {current_epoch}/{total_epochs})')
-    axes[2].set_xlabel('Epoch')
-    axes[2].set_ylabel('Loss')
-    axes[2].grid(True, alpha=0.3)
-    axes[2].set_xticks(epochs_list)
-    axes[2].legend()
+    # График accuracy
+    train_acc_len = len(history.get('train_accuracy', []))
+    valid_acc_len = len(history.get('valid_accuracy', []))
+    
+    if train_acc_len > 0 and valid_acc_len > 0:
+        min_acc_epochs = min(train_acc_len, valid_acc_len)
+        axes[1].plot(
+            epochs_list[:min_acc_epochs], 
+            history['train_accuracy'][:min_acc_epochs], 
+            'b-', label='Train Accuracy', marker='o'
+        )
+        axes[1].plot(
+            epochs_list[:min_acc_epochs], 
+            history['valid_accuracy'][:min_acc_epochs], 
+            'r-', label='Valid Accuracy', marker='s'
+        )
+        axes[1].set_xlabel('Epoch')
+        axes[1].set_ylabel('Accuracy')
+        axes[1].set_title(f'Accuracy History (Эпоха {current_epoch})')
+        axes[1].legend()
+        axes[1].grid(True, alpha=0.3)
+    else:
+        print(f"Недостаточно данных для построения графика accuracy. Train: {train_acc_len}, Valid: {valid_acc_len}")
+        # Если нет accuracy, показываем только один график
+        fig.delaxes(axes[1])
+        fig.set_size_inches(6, 4)
     
     plt.tight_layout()
-    
-    # Сохраняем график если указан путь
-    if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    
     return fig
 
 
